@@ -21,10 +21,10 @@ from datetime import datetime
 sleep_data = { 
                 'heartrate': {
                     'value_name': 'bpm',
-                    'periods': [5, 10, 15], 
+                    'periods': [2, 5, 10, 15], 
                     'raw_data': [],
                     'averaged_data': [],
-                    }, 
+                    },
                 'movement':{
                     'value_name': 'movement',
                     'periods': [10, 30, 60],
@@ -48,7 +48,7 @@ graph_axes = graph_figure.add_subplot(1, 1, 1)
 graph_data = {}
 
 last_tick_time = None
-tick_seconds = 1
+tick_seconds = 0.5
 
 fieldnames = []
 for data_type, _ in sleep_data.items():
@@ -159,9 +159,9 @@ def flush_old_raw_data(tick_time):
 
 def average_raw_data(tick_time):
     global sleep_data
-    csv_out = {}
 
     timestamp = datetime.fromtimestamp(tick_time)
+    csv_out = {'time': timestamp }
 
     for data_type, _ in sleep_data.items():
         period_averages_dict = {}
@@ -186,6 +186,7 @@ def average_raw_data(tick_time):
                 period_data_average = 0
 
             period_averages_dict[period_seconds] = zero_to_nan(period_data_average)
+
             csv_out[data_type + str(period_seconds)] = zero_to_nan(period_data_average)
 
         sleep_data[data_type]['averaged_data'].append(period_averages_dict)
@@ -243,7 +244,8 @@ def update_graph_data():
             for sleep_datum in sleep_data[data_type]['averaged_data'][starting_index:ending_index]:
                 graph_data[data_type]['time'].append(sleep_datum['time'])
                 for period in data_periods:
-                    graph_data[data_type]['data'][period].append(sleep_datum[period])
+                    if graph_data[data_type]['data'][period] != 'nan':
+                        graph_data[data_type]['data'][period].append(sleep_datum[period])
 
 
 def graph_animation(i):
@@ -306,7 +308,7 @@ def start_data_pull():
             band.gyro_started_flag = False
             connect()
     
-    
+
 if __name__ == "__main__":
     connect()
     data_gather_thread = threading.Thread(target=start_data_pull)
