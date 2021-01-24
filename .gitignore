@@ -1,0 +1,9 @@
+mac.txt
+auth_key.txt
+*.pyc
+/__pycache__
+*.swp
+*.csv
+*.wav
+*.code-workspace
+/.vscode

@@ -1,0 +1,30 @@
+BLESleep: A project to implement sleep tracking and nightmare interruption on Linux using the Mi Band 4 fitness tracker
+It is inspired by the "Nightware" device, which is an FDA approved medical device: https://www.fda.gov/news-events/press-announcements/fda-permits-marketing-new-device-designed-reduce-sleep-disturbance-related-nightmares-certain-adults
+
+This project is based on the satcar77/miband4 project.
+
+USAGE: 
+You will need to create two .txt files in the base directory:
+  auth_key.txt: the authentication key for your miband 4.  See https://github.com/argrento/huami-token for details on obtaining this.
+  mac.txt: the Bluetooth MAC address for your miband 4.
+
+
+CURRENT STATUS:
+Right now the project does not yet fulfill its purpose.  
+If you execute the project as-is, it will connect to the miband and plot HR and gyroscope data to the screen.
+I'm currently working on massaging the returned data to create signals that can be usefully incorporated into a detection algorithm.
+
+GOALS:
+* Publish statistics to Google Sheets or other easy-to-use target.  I'd like to make this usable by non-technical folks, so S3 buckets and CloudWatch are out of scope.
+* Incorporate an LSTM neural network as the detection algorithm.  This will require a dedicated "training period", as each user will likely produce different signals.
+* Create a GUI dashboard to display sleep statistics and other controls.  My vision for the end product is a standalone RasPi device with a 7" touchscreen display.
+* Add support for multiple (cheap) fitness trackers.  I'd like this work to be usable by low-income folks who can't afford Apple Watches.
+* Create a framework to incorporate additional biometrics/signals as they become available.  For example, SpO2, galvanic skin response, respiration, BP, etc.
+* Create a holistic sleep-tracking interface to provide users the ability to clearly observe the effects of things like changes in routine, medication, diet, etc.
+
+
+DISCLAIMER:
+None of the statements on this web site have been evaluated by the FDA.
+Furthermore, none of the statements herein should be construed as dispensing medical advice, or making claims regarding the cure or treatment of diseases. 
+These statements have not been evaluated by the Food and Drug Administration. 
+These project is not intended to diagnose, treat, cure, or prevent any diseases.
