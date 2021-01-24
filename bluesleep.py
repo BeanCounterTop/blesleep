@@ -50,7 +50,7 @@ graph_data = {}
 last_tick_time = None
 tick_seconds = 0.5
 
-fieldnames = []
+fieldnames = ['time']
 for data_type, _ in sleep_data.items():
     periods = sleep_data[data_type]['periods']
     for period in periods:
