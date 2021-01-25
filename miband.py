@@ -1,12 +1,19 @@
-import sys,os,time
+import sys, os, time
 import logging
-from bluepy.btle import Peripheral, DefaultDelegate, ADDR_TYPE_RANDOM,ADDR_TYPE_PUBLIC, BTLEException, BTLEDisconnectError
-
-from constants import UUIDS, AUTH_STATES, ALERT_TYPES, QUEUE_TYPES, MUSICSTATE
 import struct
+
+from bluepy.btle import (
+    Peripheral, DefaultDelegate, 
+    ADDR_TYPE_RANDOM, ADDR_TYPE_PUBLIC,
+    BTLEException, BTLEDisconnectError
+)
 from datetime import datetime, timedelta
 from Crypto.Cipher import AES
 from datetime import datetime
+
+from constants import (
+    UUIDS, AUTH_STATES, ALERT_TYPES, QUEUE_TYPES, MUSICSTATE
+)
 
 try:
     from Queue import Queue, Empty
@@ -95,6 +102,7 @@ class Delegate(DefaultDelegate):
                 self.device.queue.put((QUEUE_TYPES.RAW_ACCEL, data))
         else:
             print ("Unhandled handle: " + str(hnd) + " | Data: " + str(data))
+
 
 class miband(Peripheral):
     _send_rnd_cmd = struct.pack('<2s', b'\x02\x00')
