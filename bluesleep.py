@@ -47,6 +47,7 @@ graph_figure = plt.figure()
 graph_axes = graph_figure.add_subplot(1, 1, 1)
 graph_data = {}
 
+last_heartrate = 0
 last_tick_time = None
 tick_seconds = 0.5
 
@@ -171,7 +172,7 @@ def flush_old_raw_data(tick_time):
 
 def average_raw_data(tick_time):
     global sleep_data
-
+    global last_heartrate
     timestamp = datetime.fromtimestamp(tick_time)
     csv_out = {'time': timestamp }
 
