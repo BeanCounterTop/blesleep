@@ -157,7 +157,7 @@ def flush_old_raw_data(tick_time):
     
     for data_type in sleep_data:
         s_data = sleep_data[data_type]
-        periods = s_datum['periods']
+        periods = s_data['periods']
 
         cleaned_raw_data = []
         
@@ -186,7 +186,7 @@ def average_raw_data(tick_time):
         for period_seconds in periods:
             period_data = []
             period_averages_dict[period_seconds] = 0
-            for raw_datum in s_datum['raw_data']:
+            for raw_datum in s_data['raw_data']:
                 datum_age_seconds = tick_time - raw_datum['time']
                 if datum_age_seconds < period_seconds:
                     period_data.append(raw_datum[value_name])
@@ -286,7 +286,7 @@ def graph_animation(i):
     for data_type in sleep_data:
         s_data = sleep_data[data_type]
         g_data = graph_data[data_type]
-        if len(g_datum['time']) > 0:
+        if len(g_data['time']) > 0:
             plotflag = True
             data_periods = sleep_data[data_type]['periods']
             for period in data_periods:
