@@ -156,17 +156,17 @@ def flush_old_raw_data(tick_time):
     global sleep_data
     
     for data_type in sleep_data:
-        s_datum = sleep_data[data_type]
+        s_data = sleep_data[data_type]
         periods = s_datum['periods']
 
         cleaned_raw_data = []
         
-        for raw_datum in s_datum['raw_data']:
+        for raw_datum in s_data['raw_data']:
             datum_age = tick_time - raw_datum['time']
             if datum_age < max(periods):
                 cleaned_raw_data.append(raw_datum)
 
-        s_datum['raw_data'] = cleaned_raw_data
+        s_data['raw_data'] = cleaned_raw_data
 
 
 def average_raw_data(tick_time):
@@ -176,10 +176,10 @@ def average_raw_data(tick_time):
     csv_out = {'time': timestamp }
 
     for data_type in sleep_data:
-        s_datum = sleep_data[data_type]
+        s_data = sleep_data[data_type]
         period_averages_dict = {'time': timestamp}
-        periods = s_datum['periods']
-        value_name = s_datum['value_name']
+        periods = s_data['periods']
+        value_name = s_data['value_name']
 
         flush_old_raw_data(tick_time)
 
@@ -202,7 +202,7 @@ def average_raw_data(tick_time):
 
             csv_out[data_type + str(period_seconds)] = zero_to_nan(period_data_average)
 
-        s_datum['averaged_data'].append(period_averages_dict)
+        s_data['averaged_data'].append(period_averages_dict)
     write_csv(csv_out)
 
 
@@ -246,25 +246,25 @@ def update_graph_data():
     global graph_data
 
     for data_type in sleep_data:
-        s_datum = sleep_data[data_type]  # Re-referenced to shorten name
-        avg_datum = s_datum['averaged_data']
+        s_data = sleep_data[data_type]  # Re-referenced to shorten name
+        avg_data = s_data['averaged_data']
 
-        if len(avg_datum) > 1:
+        if len(avg_data) > 1:
             
-            g_datum = graph_data[data_type]  # Re-referenced to short name
-            data_periods = s_datum['periods']
+            g_data = graph_data[data_type]  # Re-referenced to short name
+            data_periods = s_data['periods']
 
-            starting_index = max([(len(g_dataum['time']) - 1), 0])
-            ending_index = len(avg_datum) - 1
+            starting_index = max([(len(g_data['time']) - 1), 0])
+            ending_index = len(avg_data) - 1
 
             # Re-referenced to shorten name
-            sleep_data_range = avg_datum[starting_index:ending_index]
+            sleep_data_range = avg_data[starting_index:ending_index]
 
             for sleep_datum in sleep_data_range:
-                g_datum['time'].append(sleep_datum['time'])
+                g_data['time'].append(sleep_datum['time'])
                 for period in data_periods:
-                    if g_datum['data'][period] != 'nan':
-                        g_datum['data'][period].append(sleep_datum[period])
+                    if g_data['data'][period] != 'nan':
+                        g_data['data'][period].append(sleep_datum[period])
 
 
 def graph_animation(i):
@@ -284,15 +284,15 @@ def graph_animation(i):
             break
 
     for data_type in sleep_data:
-        s_datum = sleep_data[data_type]
-        g_datum = graph_data[data_type]
+        s_data = sleep_data[data_type]
+        g_data = graph_data[data_type]
         if len(g_datum['time']) > 0:
             plotflag = True
             data_periods = sleep_data[data_type]['periods']
             for period in data_periods:
-                axis_label = "{} {} sec".format(s_datum['value_name'], period)
-                graph_axes.plot(g_datum['time'],
-                                g_datum['data'][period],
+                axis_label = "{} {} sec".format(s_data['value_name'], period)
+                graph_axes.plot(g_data['time'],
+                                g_data['data'][period],
                                 label=axis_label) 
 
     if plotflag:
