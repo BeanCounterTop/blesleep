@@ -196,7 +196,10 @@ def average_raw_data(tick_time):
             else:
                 print("({}) Period data empty: {}".format(data_type,
                                                           period_seconds))
-                period_data_average = 0
+                if data_type == "heartrate" and period_seconds == min(periods):
+                    period_data_average = last_heartrate
+                else:
+                    period_data_average = 0
 
             period_averages_dict[period_seconds] = zero_to_nan(period_data_average)
 
