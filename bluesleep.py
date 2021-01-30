@@ -332,11 +332,36 @@ def start_data_pull():
 
     while True:
         try:
-            band.start_heart_and_gyro(callback=sleep_monitor_callback)
+            band.start_heart_and_gyro(sensitivity=1, callback=sleep_monitor_callback)
         except BTLEDisconnectError:
             band.gyro_started_flag = False
             connect()
 
+def vibrate_pattern(duration):
+    print("Sending vibration...")
+    duration_start = time.time()
+    pulse_pattern = [[30, 0.01], [60, 0.01], [90, 0.01], [120, 0.01], [150, 0.01], [180, 0.01]]
+
+    while True:
+        if (time.time() - duration_start) >= duration:
+            print ("Stopping vibration")
+            band.vibrate(0)
+            break
+        else:
+            for pattern in pulse_pattern:
+                if (time.time() - duration_start) >= duration:
+                    break
+                vibrate_ms = pattern[0]
+                vibro_delay = pattern[1]
+                band.vibrate(vibrate_ms)
+                time.sleep(vibro_delay)
+
+def vibrate_rolling():
+    for x in range(10):
+        for x in range(20, 40, 1):
+            band.vibrate(x)
+        for x in range(40, 20, -1):
+            band.vibrate(x)
 
 if __name__ == "__main__":
     connect()

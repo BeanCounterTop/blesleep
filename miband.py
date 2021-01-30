@@ -1,6 +1,7 @@
 import sys, os, time
 import logging
 import struct
+import binascii
 
 from bluepy.btle import (
     Peripheral, DefaultDelegate, 
@@ -15,14 +16,8 @@ from constants import (
     UUIDS, AUTH_STATES, ALERT_TYPES, QUEUE_TYPES, MUSICSTATE
 )
 
-try:
-    from Queue import Queue, Empty
-except ImportError:
-    from queue import Queue, Empty
-try:
-    xrange
-except NameError:
-    xrange = range
+from queue import Queue, Empty
+
 
 
 class Delegate(DefaultDelegate):
@@ -33,17 +28,16 @@ class Delegate(DefaultDelegate):
 
     def handleNotification(self, hnd, data):
         if hnd == self.device._char_auth.getHandle():
-            if data[:3] == b'\x10\x01\x01':
+            if data[:3] == bytepattern.fetch_begin:
                 self.device._req_rdn()
-            elif data[:3] == b'\x10\x01\x04':
+            elif data[:3] == bytepattern.fetch_error:
                 self.device.state = AUTH_STATES.KEY_SENDING_FAILED
-            elif data[:3] == b'\x10\x02\x01':
-                # 16 bytes
+            elif data[:3] == bytepattern.fetch_continue:
                 random_nr = data[3:]
                 self.device._send_enc_rdn(random_nr)
-            elif data[:3] == b'\x10\x02\x04':
+            elif data[:3] == bytepattern.fetch_complete:
                 self.device.state = AUTH_STATES.REQUEST_RN_ERROR
-            elif data[:3] == b'\x10\x03\x01':
+            elif data[:3] == bytepattern.auth_ok:
                 self.device.state = AUTH_STATES.AUTH_OK
             else:
                 self.device.state = AUTH_STATES.AUTH_FAILED
@@ -54,49 +48,6 @@ class Delegate(DefaultDelegate):
                 self.device.queue.put((QUEUE_TYPES.RAW_ACCEL, data))
             elif len(data) == 16:
                 self.device.queue.put((QUEUE_TYPES.RAW_HEART, data))
-        # The fetch characteristic controls the communication with the activity characteristic.
-        elif hnd == self.device._char_fetch.getHandle():
-            if data[:3] == b'\x10\x01\x01':
-                # get timestamp from what date the data actually is received
-                year = struct.unpack("<H", data[7:9])[0]
-                month = struct.unpack("b", data[9:10])[0]
-                day = struct.unpack("b", data[10:11])[0]
-                hour = struct.unpack("b", data[11:12])[0]
-                minute = struct.unpack("b", data[12:13])[0]
-                self.device.first_timestamp = datetime(year, month, day, hour, minute)
-                print("Fetch data from {}-{}-{} {}:{}".format(year, month, day, hour, minute))
-                self.pkg = 0 #reset the packing index
-                self.device._char_fetch.write(b'\x02', False)
-            elif data[:3] == b'\x10\x02\x01':
-                if self.device.last_timestamp > self.device.end_timestamp - timedelta(minutes=1):
-                    print("Finished fetching")
-                    return
-                print("Trigger more communication")
-                time.sleep(1)
-                t = self.device.last_timestamp + timedelta(minutes=1)
-                self.device.start_get_previews_data(t)
-
-            elif data[:3] == b'\x10\x02\x04':
-                print("No more activity fetch possible")
-                return
-            else:
-                print("Unexpected data on handle " + str(hnd) + ": " + str(data))
-                return
-        elif hnd == self.device._char_activity.getHandle():
-            if len(data) % 4 == 1:
-                self.pkg += 1
-                i = 1
-                while i < len(data):
-                    index = int(self.pkg) * 4 + (i - 1) / 4
-                    timestamp = self.device.first_timestamp + timedelta(minutes=index)
-                    self.device.last_timestamp = timestamp
-                    category = struct.unpack("<B", data[i:i + 1])[0]
-                    intensity = struct.unpack("B", data[i + 1:i + 2])[0]
-                    steps = struct.unpack("B", data[i + 2:i + 3])[0]
-                    heart_rate = struct.unpack("B", data[i + 3:i + 4])[0]
-                    if timestamp < self.device.end_timestamp:
-                        self.device.activity_callback(timestamp,category,intensity,steps,heart_rate)
-                    i += 4
         elif hnd == self.device._char_hz.getHandle():
             if len(data) == 20 and struct.unpack('b', data[0:1])[0] == 1:
                 self.device.queue.put((QUEUE_TYPES.RAW_ACCEL, data))
@@ -104,10 +55,38 @@ class Delegate(DefaultDelegate):
             print ("Unhandled handle: " + str(hnd) + " | Data: " + str(data))
 
 
+class bytepattern():
+    def vibration(duration):
+        byte_pattern = 'ff{:02x}00000001'
+        return bytes.fromhex(byte_pattern.format(duration))
+
+    def gyro_start(sensitivity):
+        byte_pattern = '01{:02x}19'
+        return bytes.fromhex(byte_pattern.format(sensitivity))
+
+    start = bytes.fromhex('0100')
+    stop = bytes.fromhex('0000')
+
+    heart_measure_keepalive = bytes.fromhex('16')
+    stop_heart_measure_continues = bytes.fromhex('150100')
+    start_heart_measure_continues = bytes.fromhex('150101')
+    stop_heart_measure_manual = bytes.fromhex('150200')
+
+    fetch_begin = bytes.fromhex('100101')
+    fetch_error = bytes.fromhex('100104')
+
+    fetch_continue = bytes.fromhex('100201')
+    fetch_complete = bytes.fromhex('100204')
+
+    auth_ok = bytes.fromhex('100301')
+
+    request_random_number = bytes.fromhex('0200')
+    auth_key_prefix = bytes.fromhex('0300')
+    
+
+
 class miband(Peripheral):
-    _send_rnd_cmd = struct.pack('<2s', b'\x02\x00')
-    _send_enc_key = struct.pack('<2s', b'\x03\x00')
-    def __init__(self, mac_address,key=None, timeout=0.5, debug=False):
+    def __init__(self, mac_address, key=None, timeout=0.5, debug=False):
         FORMAT = '%(asctime)-15s %(name)s (%(levelname)s) > %(message)s'
         logging.basicConfig(format=FORMAT)
         log_level = logging.WARNING if not debug else logging.DEBUG
@@ -129,10 +108,6 @@ class miband(Peripheral):
         self.auth_key = key
         self.queue = Queue()
         self.gyro_started_flag = False
-
-        self.start_bytes = b'\x01\x00'
-        self.stop_bytes = b"\x00\x00"
-        self.gyro_sensitivity = 1
 
         self.svc_1 = self.getServiceByUUID(UUIDS.SERVICE_MIBAND1)
         self.svc_2 = self.getServiceByUUID(UUIDS.SERVICE_MIBAND2)
@@ -169,32 +144,28 @@ class miband(Peripheral):
         self.waitForNotifications(0.1)
         self.setDelegate( Delegate(self) )
 
-    def generateAuthKey(self):
-        if(self.auth_key):
-            return struct.pack('<18s',b'\x01\x00'+ self.auth_key)
-
     def _auth_notif(self, enabled):
         if enabled:
             self._log.info("Enabling Auth Service notifications status...")
-            self._desc_auth.write(self.start_bytes, True)
+            self._desc_auth.write(bytepattern.start, True)
         elif not enabled:
             self._log.info("Disabling Auth Service notifications status...")
-            self._desc_auth.write(self.stop_bytes, True)
+            self._desc_auth.write(bytepattern.stop, True)
         else:
             self._log.error("Something went wrong while changing the Auth Service notifications status...")
 
     def _auth_previews_data_notif(self, enabled):
         if enabled:
             self._log.info("Enabling Fetch Char notifications status...")
-            self._desc_fetch.write(self.start_bytes, True)
+            self._desc_fetch.write(bytepattern.start, True)
             self._log.info("Enabling Activity Char notifications status...")
-            self._desc_activity.write(self.start_bytes, True)
+            self._desc_activity.write(bytepattern.start, True)
             self.activity_notif_enabled = True
         else:
             self._log.info("Disabling Fetch Char notifications status...")
-            self._desc_fetch.write(self.stop_bytes, True)
+            self._desc_fetch.write(bytepattern.stop, True)
             self._log.info("Disabling Activity Char notifications status...")
-            self._desc_activity.write(self.stop_bytes, True)
+            self._desc_activity.write(bytepattern.stop, True)
             self.activity_notif_enabled = False
 
     def initialize(self):
@@ -213,12 +184,12 @@ class miband(Peripheral):
 
     def _req_rdn(self):
         self._log.info("Requesting random number...")
-        self._char_auth.write(self._send_rnd_cmd)
+        self._char_auth.write(bytepattern.request_random_number)
         self.waitForNotifications(self.timeout)
 
     def _send_enc_rdn(self, data):
         self._log.info("Sending encrypted random number")
-        cmd = self._send_enc_key + self._encrypt(data)
+        cmd = bytepattern.auth_key_prefix + self._encrypt(data)
         send_cmd = struct.pack('<18s', cmd)
         self._char_auth.write(send_cmd)
         self.waitForNotifications(self.timeout)
@@ -252,68 +223,52 @@ class miband(Peripheral):
     def _parse_heart_measure(self, bytes):
         res = struct.unpack('bb', bytes)[1]
         return_tuple = ["HR", res]
+        print("BPM: {}".format(res))
         return return_tuple
 
     def _parse_raw_gyro(self, bytes):
         res = []
-        for i in xrange(3):
+        for i in range(3):
             g = struct.unpack('hhh', bytes[2 + i * 6:8 + i * 6])
             res.append({'x': g[0], 'y': g[1], 'z': g[2]})
         return_tuple = ["GYRO", res]
         return return_tuple
 
-    def send_vibration(self, duration):
-        duration_time = time.time()
-        pulse_time = time.time()
-        vibro_start_value = 30
-        #pulse_value = 100
-        duration = 20
-        vibro_current_value = vibro_start_value
-        
-        while True:
-            if (time.time() - duration_time) >= duration:
-                print ("Stopping vibration")
-                self._char_alert.write(b'\x00\x00\x00\x00\x00\x00', withResponse=False)
-                break
-            else:
-                if ((time.time() - pulse_time)*1000) >= vibro_current_value:
-                    pulse_time = time.time()
-                    self._char_alert.write(b'\xff' + (vibro_current_value).to_bytes(1, 'big') + b'\x00\x00\x00\x01', withResponse=False)
-                    vibro_current_value += 1
-                    print (vibro_current_value)
-                    if vibro_current_value > 255:
-                        vibro_current_value = vibro_start_value
+    def vibrate(self, ms):
+        vibration_scaler = 0.75
+        ms = min([round(ms / vibration_scaler), 255])
+        sent_value = int(ms / 2)
+        vibration_duration = ms / 1000
+        self._char_alert.write(bytepattern.vibration(sent_value), withResponse=False)
+        time.sleep(vibration_duration)
 
-    def send_gyro_start(self):
+    def send_gyro_start(self, sensitivity):
         if not self.gyro_started_flag:
             self._log.info("Starting gyro...")
-            self.writeCharacteristic(self._sensor_handle, self.start_bytes, withResponse=True)
-            self.writeCharacteristic(self._steps_handle, self.start_bytes, withResponse=True)
-            self.writeCharacteristic(self._hz_handle, self.start_bytes, withResponse=True)
+            self.writeCharacteristic(self._sensor_handle, bytepattern.start, withResponse=True)
+            self.writeCharacteristic(self._steps_handle, bytepattern.start, withResponse=True)
+            self.writeCharacteristic(self._hz_handle, bytepattern.start, withResponse=True)
             self.gyro_started_flag = True
             
-        self._char_sensor.write(b'\x01' + bytes([self.gyro_sensitivity]) + b'\x19', withResponse=False)
-        self.writeCharacteristic(self._sensor_handle, self.stop_bytes, withResponse=True)
+        self._char_sensor.write(bytepattern.gyro_start(sensitivity), withResponse=False)
+        self.writeCharacteristic(self._sensor_handle, bytepattern.stop, withResponse=True)
         self._char_sensor.write(b'\x02', withResponse=False)
 
     def send_heart_measure_start(self):
         self._log.info("Starting heart measure...")
-        # stop heart monitor continues & manual
-        self._char_heart_ctrl.write(b'\x15\x02\x00', True)
-        self._char_heart_ctrl.write(b'\x15\x01\x00', True)
-        # enable heart monitor notifications
-        self.writeCharacteristic(self._heart_measure_handle, self.start_bytes, withResponse=True)
-        # start heart monitor continues
-        self._char_heart_ctrl.write(b'\x15\x01\x01', True)
+        self._char_heart_ctrl.write(bytepattern.stop_heart_measure_manual, True)
+        self._char_heart_ctrl.write(bytepattern.stop_heart_measure_continues, True)
+        self.writeCharacteristic(self._heart_measure_handle, bytepattern.start, withResponse=True)
+        self._char_heart_ctrl.write(bytepattern.start_heart_measure_continues, True)
         
     def send_heart_measure_keepalive(self):
-        self._char_heart_ctrl.write(b'\x16', True)
+        self._char_heart_ctrl.write(bytepattern.heart_measure_keepalive, True)
 
-    def start_heart_and_gyro(self, callback):
+    def start_heart_and_gyro(self, sensitivity, callback):
         self.heart_measure_callback = callback
         self.gyro_raw_callback = callback
 
-        self.send_gyro_start()
+        self.send_gyro_start(sensitivity)
         self.send_heart_measure_start()
 
         heartbeat_time = time.time()
@@ -323,4 +278,4 @@ class miband(Peripheral):
             if (time.time() - heartbeat_time) >= 12:
                 heartbeat_time = time.time()
                 self.send_heart_measure_keepalive()
-                self.send_gyro_start()
+                self.send_gyro_start(sensitivity)
