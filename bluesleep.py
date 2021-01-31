@@ -8,6 +8,7 @@ import sleepdata
 
 import threading
 import re
+import random
 
 import subprocess
 import time
@@ -18,6 +19,11 @@ mac_filename = 'mac.txt'
 csv_filename = "sleep_data.csv"
 
 band = None
+
+buzz_timer = time.time()
+buzz_minutes = 45
+buzz_delay = buzz_minutes * 60
+
 
 #-------------------------------------------------------------------------#
 
@@ -61,16 +67,62 @@ def process_data(data, tick_time):
     elif data[0] == "HR":
         sleepdata.process_heartrate_data(data[1], tick_time)
 
+def average_data(tick_time):
+    if (tick_time - sleepdata.last_tick_time) >= sleepdata.tick_seconds:
+        sleepdata.average_raw_data(tick_time)
+        sleepdata.last_tick_time = time.time()
+
+def timed_buzzing(buzz_delay, buzz_duration):
+    buzz_timer = time.time()
+    tick_time = time.time()
+    while True:
+        elapsed_time = tick_time - buzz_timer
+        if elapsed_time >= buzz_delay:
+            print("Buzz timer expired, buzzing")
+            vibrate_random(buzz_duration)
+            buzz_timer = tick_time
+        else:
+             tick_time = time.time()
+        time.sleep(1)
+
+def generate_random_vibration_pattern(count):
+    pulse_pattern = []
+    pulse_range = [120, 240]
+    pulse_interval_range = [1, 8]
+    for _ in range(count):
+        buzz_pulse = random.randrange(pulse_range[0], pulse_range[1])
+        buzz_delay = random.randrange(pulse_interval_range[0], pulse_interval_range[1])/10
+        pulse_pattern.append([buzz_pulse, buzz_delay])
+    return pulse_pattern
+
+def vibrate_random(duration):
+    print("Sending random vibration...")
+    duration_start = time.time()
+
+    pulse_pattern = generate_random_vibration_pattern(20)
+
+    while True:
+        if (time.time() - duration_start) >= duration:
+            print ("Stopping vibration")
+            band.vibrate(0)
+            break
+        else:
+            for pattern in pulse_pattern:
+                if (time.time() - duration_start) >= duration:
+                    break
+                vibrate_ms = pattern[0]
+                vibro_delay = pattern[1]
+                band.vibrate(vibrate_ms)
+                time.sleep(vibro_delay)
+    
+
+
 def sleep_monitor_callback(data):
     tick_time = time.time()
     if not sleepdata.last_tick_time:
         sleepdata.last_tick_time = time.time()
-    
     process_data(data, tick_time)
-
-    if (tick_time - sleepdata.last_tick_time) >= sleepdata.tick_seconds:
-        sleepdata.average_raw_data(tick_time)
-        sleepdata.last_tick_time = time.time()
+    average_data(tick_time)
 
 def connect(mac_filename, auth_key_filename):
     global band
@@ -129,9 +181,8 @@ def vibrate_rolling():
 
 if __name__ == "__main__":
     connect(mac_filename, auth_key_filename)
-    #vibrate_pattern(10)
-    data_gather_thread = threading.Thread(target=start_data_pull)
-    data_gather_thread.start()
+    threading.Thread(target=start_data_pull).start()
+    threading.Thread(target=timed_buzzing, args=([buzz_delay, 15])).start()
     sleepdata.init_graph()
 
 
