@@ -3,6 +3,8 @@ import logging
 import struct
 import binascii
 
+from bytepatterns import miband4 as bytepattern
+
 from bluepy.btle import (
     Peripheral, DefaultDelegate, 
     ADDR_TYPE_RANDOM, ADDR_TYPE_PUBLIC,
@@ -55,34 +57,7 @@ class Delegate(DefaultDelegate):
             print ("Unhandled handle: " + str(hnd) + " | Data: " + str(data))
 
 
-class bytepattern():
-    def vibration(duration):
-        byte_pattern = 'ff{:02x}00000001'
-        return bytes.fromhex(byte_pattern.format(duration))
 
-    def gyro_start(sensitivity):
-        byte_pattern = '01{:02x}19'
-        return bytes.fromhex(byte_pattern.format(sensitivity))
-
-    start = bytes.fromhex('0100')
-    stop = bytes.fromhex('0000')
-
-    heart_measure_keepalive = bytes.fromhex('16')
-    stop_heart_measure_continues = bytes.fromhex('150100')
-    start_heart_measure_continues = bytes.fromhex('150101')
-    stop_heart_measure_manual = bytes.fromhex('150200')
-
-    fetch_begin = bytes.fromhex('100101')
-    fetch_error = bytes.fromhex('100104')
-
-    fetch_continue = bytes.fromhex('100201')
-    fetch_complete = bytes.fromhex('100204')
-
-    auth_ok = bytes.fromhex('100301')
-
-    request_random_number = bytes.fromhex('0200')
-    auth_key_prefix = bytes.fromhex('0300')
-    
 
 
 class miband(Peripheral):
