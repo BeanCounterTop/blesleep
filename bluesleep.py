@@ -24,7 +24,6 @@ buzz_timer = time.time()
 buzz_minutes = 45
 buzz_delay = buzz_minutes * 60
 
-
 #-------------------------------------------------------------------------#
 
 class regex_patterns():
@@ -183,7 +182,7 @@ if __name__ == "__main__":
     connect(mac_filename, auth_key_filename)
     threading.Thread(target=start_data_pull).start()
     threading.Thread(target=timed_buzzing, args=([buzz_delay, 15])).start()
-    sleepdata.init_graph()
+    #sleepdata.init_graph()
 
 
 

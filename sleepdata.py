@@ -77,10 +77,6 @@ def flush_old_raw_data(tick_time):
 
         s_data['raw_data'] = cleaned_raw_data
 
-def write_csv(data):
-    a = ''
-
-
 def average_raw_data(tick_time):
     global last_heartrate
     timestamp = datetime.fromtimestamp(tick_time)
@@ -118,8 +114,6 @@ def average_raw_data(tick_time):
 
         s_data['averaged_data'].append(period_averages_dict)
     write_csv(csv_out)
-
-
 
 def process_gyro_data(gyro_data, tick_time):
     # Each gyro reading from miband4 comes over as a group of three,

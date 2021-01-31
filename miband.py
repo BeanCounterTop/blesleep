@@ -82,6 +82,7 @@ class miband(Peripheral):
         self.gyro_raw_callback = None
         self.auth_key = key
         self.queue = Queue()
+        self.write_queue = Queue()
         self.gyro_started_flag = False
 
         self.svc_1 = self.getServiceByUUID(UUIDS.SERVICE_MIBAND1)
@@ -209,35 +210,66 @@ class miband(Peripheral):
         return_tuple = ["GYRO", res]
         return return_tuple
 
+
+    def process_write_queue(self):
+        while True:
+            try:
+                res = self.write_queue.get(False)
+                _type = res[0]
+                _payload = res[1]
+                if _type == 'write_cmd':
+                    self.write_cmd(_payload[0], _payload[1], response=_payload[2])
+                elif _type == 'write_req':
+                    self.write_req(_payload[0], _payload[1], response=_payload[2])
+            except Empty:
+                break
+
     def vibrate(self, ms):
         vibration_scaler = 0.75
         ms = min([round(ms / vibration_scaler), 255])
         sent_value = int(ms / 2)
         vibration_duration = ms / 1000
-        self._char_alert.write(bytepattern.vibration(sent_value), withResponse=False)
+        self.write_cmd(self._char_alert, bytepattern.vibration(sent_value), queued=True)
         time.sleep(vibration_duration)
+
+    def write_cmd(self, characteristic, data, response=False, queued=False):
+        if queued:
+            self.write_queue.put(['write_cmd', [characteristic, data, response]])
+        else:
+            characteristic.write(data, withResponse=response)
+
+    def write_req(self, handle, data, response=True, queued=False):
+        if queued:
+            self.write_queue.put(['write_req', [handle, data, response]])
+        else:
+            self.writeCharacteristic(handle, data, withResponse=response)
+
+
+    def wait_for_notifications_with_queued_writes(self, wait):
+        self.process_write_queue()
+        self.waitForNotifications(wait)
 
     def send_gyro_start(self, sensitivity):
         if not self.gyro_started_flag:
             self._log.info("Starting gyro...")
-            self.writeCharacteristic(self._sensor_handle, bytepattern.start, withResponse=True)
-            self.writeCharacteristic(self._steps_handle, bytepattern.start, withResponse=True)
-            self.writeCharacteristic(self._hz_handle, bytepattern.start, withResponse=True)
+            self.write_req(self._sensor_handle, bytepattern.start)
+            self.write_req(self._steps_handle, bytepattern.start)
+            self.write_req(self._hz_handle, bytepattern.start)
             self.gyro_started_flag = True
-            
-        self._char_sensor.write(bytepattern.gyro_start(sensitivity), withResponse=False)
-        self.writeCharacteristic(self._sensor_handle, bytepattern.stop, withResponse=True)
-        self._char_sensor.write(b'\x02', withResponse=False)
+        self.write_cmd(self._char_sensor, bytepattern.gyro_start(sensitivity))
+        self.write_req(self._sensor_handle, bytepattern.stop)
+        self.write_cmd(self._char_sensor, b'\x02')
 
     def send_heart_measure_start(self):
         self._log.info("Starting heart measure...")
-        self._char_heart_ctrl.write(bytepattern.stop_heart_measure_manual, True)
-        self._char_heart_ctrl.write(bytepattern.stop_heart_measure_continues, True)
-        self.writeCharacteristic(self._heart_measure_handle, bytepattern.start, withResponse=True)
-        self._char_heart_ctrl.write(bytepattern.start_heart_measure_continues, True)
-        
+        self.write_cmd(self._char_heart_ctrl, bytepattern.stop_heart_measure_manual, response=True)
+        self.write_cmd(self._char_heart_ctrl, bytepattern.stop_heart_measure_continues, response=True)
+        self.write_req(self._heart_measure_handle, bytepattern.start)
+        self.write_cmd(self._char_heart_ctrl, bytepattern.start_heart_measure_continues, response=True)
+
+
     def send_heart_measure_keepalive(self):
-        self._char_heart_ctrl.write(bytepattern.heart_measure_keepalive, True)
+        self.write_cmd(self._char_heart_ctrl, bytepattern.heart_measure_keepalive, response=True)
 
     def start_heart_and_gyro(self, sensitivity, callback):
         self.heart_measure_callback = callback
@@ -248,7 +280,7 @@ class miband(Peripheral):
 
         heartbeat_time = time.time()
         while True:
-            self.waitForNotifications(0.5)
+            self.wait_for_notifications_with_queued_writes(0.5)
             self._parse_queue()
             if (time.time() - heartbeat_time) >= 12:
                 heartbeat_time = time.time()
