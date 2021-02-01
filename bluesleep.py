@@ -114,8 +114,6 @@ def vibrate_random(duration):
                 band.vibrate(vibrate_ms)
                 time.sleep(vibro_delay)
     
-
-
 def sleep_monitor_callback(data):
     tick_time = time.time()
     if not sleepdata.last_tick_time:
@@ -123,7 +121,7 @@ def sleep_monitor_callback(data):
     process_data(data, tick_time)
     average_data(tick_time)
 
-def connect(mac_filename, auth_key_filename):
+def connect():
     global band
     success = False
     timeout = 3
@@ -179,7 +177,7 @@ def vibrate_rolling():
             band.vibrate(x)
 
 if __name__ == "__main__":
-    connect(mac_filename, auth_key_filename)
+    connect()
     threading.Thread(target=start_data_pull).start()
     threading.Thread(target=timed_buzzing, args=([buzz_delay, 15])).start()
     #sleepdata.init_graph()
