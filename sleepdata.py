@@ -26,9 +26,8 @@ sleep_data = {
                 } 
             }
 
-last_heartrate = 0
-last_tick_time = None
 tick_seconds = 0.5
+last_tick_time = None
 
 datestamp = datetime.now().strftime("%Y_%m_%d")
 csv_header_name_format = '{}_{}'
@@ -39,7 +38,7 @@ graph_figure = plt.figure()
 graph_axes = graph_figure.add_subplot(1, 1, 1)
 graph_data = {}
 
-
+last_heartrate = 0
 
 class Average_Gyro_Data():
     gyro_last_x = 0
@@ -60,7 +59,6 @@ class Average_Gyro_Data():
             gyro_delta_sum = gyro_delta_x + gyro_delta_y + gyro_delta_z
             gyro_movement += gyro_delta_sum
         return gyro_movement
-
 
 
 def write_csv(data, name):
@@ -108,6 +106,7 @@ def flush_old_raw_data(tick_time):
         if old_raw_data:
             write_csv(old_raw_data, 'raw')
 
+
 def average_raw_data(tick_time):
     global last_heartrate
     timestamp = datetime.fromtimestamp(tick_time)
@@ -151,7 +150,7 @@ def process_gyro_data(gyro_data, tick_time):
     sleep_move = sleep_data['movement']
     value_name = sleep_move['value_name']
     gyro_movement = average_gyro_data.process(gyro_data)
-    print("Gyro: {}".format(gyro_movement))
+    #print("Gyro: {}".format(gyro_movement))
     sleep_move['raw_data'].append({
         'time': tick_time,
         value_name: gyro_movement

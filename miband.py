@@ -224,13 +224,23 @@ class miband(Peripheral):
             except Empty:
                 break
 
-    def vibrate(self, ms):
-        vibration_scaler = 0.75
-        ms = min([round(ms / vibration_scaler), 255])
-        sent_value = int(ms / 2)
-        vibration_duration = ms / 1000
-        self.write_cmd(self._char_alert, bytepattern.vibration(sent_value), queued=True)
-        time.sleep(vibration_duration)
+    def vibrate(self, value):
+        if value == 255 or value == 0:
+            # '255' means 'continuous vibration' 
+            #   I've arbitrarily assigned the otherwise pointless value of '0' to indicate 'stop_vibration'
+            #   These modes do not require pulse timing to avoid strange behavior.
+            self.write_cmd(self._char_alert, bytepattern.vibration(value), queued=True)
+        else:
+            # A value of '150' will vibrate for ~200ms, hence vibration_scaler.
+            #   This isn't exact however, but does leave a ~5ms gap between pulses.
+            #   A scaler any lower causes the pulses to be indistinguishable from each other to a human.
+            #   I considered making this function accept a desired amount of vibration time in ms, 
+            #   however it was fiddly and I couldn't get it right.  More work could be done here.
+            vibration_scaler = 0.75  
+            ms = round(value / vibration_scaler)
+            vibration_duration = ms / 1000
+            self.write_cmd(self._char_alert, bytepattern.vibration(value), queued=True)
+            time.sleep(vibration_duration)
 
     def write_cmd(self, characteristic, data, response=False, queued=False):
         if queued:

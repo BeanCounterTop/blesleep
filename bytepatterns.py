@@ -3,6 +3,8 @@ class miband4():
 
         class bytepatterns():
             vibration = 'ff{:02x}00000001'
+            vibration_stop = 'ff0000000000'
+
             gyro_start = '01{:02x}19'
             start = '0100'
             stop = '0000'
@@ -19,7 +21,10 @@ class miband4():
             auth_key_prefix = '0300'
 
         def vibration(duration):
-            byte_pattern = miband4.bytepatterns.vibration
+            if duration == 0:
+                byte_pattern = miband4.bytepatterns.vibration_stop
+            else:
+                byte_pattern = miband4.bytepatterns.vibration
             return bytes.fromhex(byte_pattern.format(duration))
 
         def gyro_start(sensitivity):
