@@ -36,8 +36,6 @@ csv_filename_format = '{}_{}.csv'
 plt.style.use('dark_background')
 graph_figure = plt.figure()
 graph_figure.canvas.set_window_title('blesleep')
-figure_manager = plt.get_current_fig_manager()
-figure_manager.full_screen_toggle()
 
 graph_axes = graph_figure.add_subplot(1, 1, 1)
 graph_data = {}
@@ -241,7 +239,10 @@ def graph_animation(i):
         plt.legend()
 
 
-def init_graph():
+def init_graph(maximize=False):
+    if maximize:
+        figure_manager = plt.get_current_fig_manager()
+        figure_manager.full_screen_toggle()
     ani = animation.FuncAnimation(graph_figure, graph_animation, interval=1000)
     plt.show()
 
