@@ -120,7 +120,7 @@ if __name__ == "__main__":
     connect()
     threading.Thread(target=start_data_pull).start()
     threading.Thread(target=start_vibration).start()
-    #sleepdata.init_graph()
+    sleepdata.init_graph()
 
 
 
