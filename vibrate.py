@@ -7,7 +7,7 @@ band = None
 # Notes:
 # The miband4 does not (seem to) support different vibration intensities, rather the values sent (2-255)
 # represent how long the vibration motor runs.  A value of 30 roughly corresponds to 60ms of motor run time.
-# Sending a value of 255 triggers continuous vibration.
+# Sending a value of 255 triggecd rs continuous vibration.
 # Currently "continuous" mode doesn't work, as it doesn't turn off.
 # This will be fixed shortly.
 
@@ -59,8 +59,8 @@ def timed_vibration(settings):
 def generate_random_vibration_pattern(pulse_count):
     #pulse_duration_range and pulse_interval_range_ms are arbitrary
     pulse_duration_range = {
-                                'low': 60, 
-                                'high': 100
+                                'low': 80, 
+                                'high': 120
                             }  
     pulse_interval_range_ms = {
                                 'low': 100, 
