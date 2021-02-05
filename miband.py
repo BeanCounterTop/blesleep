@@ -1,7 +1,6 @@
 import sys, os, time
 import logging
 import struct
-import binascii
 
 from bytepatterns import miband4 as bytepattern
 
@@ -50,14 +49,26 @@ class Delegate(DefaultDelegate):
                 self.device.queue.put((QUEUE_TYPES.RAW_ACCEL, data))
             elif len(data) == 16:
                 self.device.queue.put((QUEUE_TYPES.RAW_HEART, data))
+            else:
+                print("Unhandled data on handle 0x38: {}".format(data))
         elif hnd == self.device._char_hz.getHandle():
             if len(data) == 20 and struct.unpack('b', data[0:1])[0] == 1:
                 self.device.queue.put((QUEUE_TYPES.RAW_ACCEL, data))
+            elif len(data) == 11:
+                #print("Unknown data: {}".format(bytes.hex(data, " ")))
+                #print(struct.unpack('BBBBBBBBBB', data[1:]))
+                # Seems to be a counter of the time the gyro is enabled.
+                #print(struct.unpack(">x2L", data))
+                #print(struct.unpack("<x5H", data))
+                ...
+            elif len(data) == 8:
+                self.device.queue.put((QUEUE_TYPES.AVG_GYRO, data))
+            else:
+                #print("Unknown sensor data ({}): {}".format(len(data), bytes.hex(data, " ")))
+                ...
         else:
-            print ("Unhandled handle: " + str(hnd) + " | Data: " + str(data))
-
-
-
+            #print ("Unhandled handle: " + str(hnd) + " | Data: " + bytes.hex(data, " "))
+            ...
 
 
 class miband(Peripheral):
@@ -80,6 +91,7 @@ class miband(Peripheral):
         self.heart_measure_callback = None
         self.heart_raw_callback = None
         self.gyro_raw_callback = None
+        self.gyro_avg_callback = None
         self.auth_key = key
         self.queue = Queue()
         self.write_queue = Queue()
@@ -120,6 +132,7 @@ class miband(Peripheral):
         self.waitForNotifications(0.1)
         self.setDelegate( Delegate(self) )
 
+
     def _auth_notif(self, enabled):
         if enabled:
             self._log.info("Enabling Auth Service notifications status...")
@@ -129,6 +142,7 @@ class miband(Peripheral):
             self._desc_auth.write(bytepattern.stop, True)
         else:
             self._log.error("Something went wrong while changing the Auth Service notifications status...")
+
 
     def _auth_previews_data_notif(self, enabled):
         if enabled:
@@ -144,6 +158,7 @@ class miband(Peripheral):
             self._desc_activity.write(bytepattern.stop, True)
             self.activity_notif_enabled = False
 
+
     def initialize(self):
         self._req_rdn()
         while True:
@@ -158,10 +173,12 @@ class miband(Peripheral):
             self._log.error(self.state)
             return False
 
+
     def _req_rdn(self):
         self._log.info("Requesting random number...")
         self._char_auth.write(bytepattern.request_random_number)
         self.waitForNotifications(self.timeout)
+
 
     def _send_enc_rdn(self, data):
         self._log.info("Sending encrypted random number")
@@ -170,9 +187,11 @@ class miband(Peripheral):
         self._char_auth.write(send_cmd)
         self.waitForNotifications(self.timeout)
 
+
     def _encrypt(self, message):
         aes = AES.new(self.auth_key, AES.MODE_ECB)
         return aes.encrypt(message)
+
 
     def _get_from_queue(self, _type):
         try:
@@ -184,17 +203,32 @@ class miband(Peripheral):
             return None
         return res[1]
 
+
     def _parse_queue(self):
         while True:
             try:
-                res = self.queue.get(False)
-                _type = res[0]
+                queue_data = self.queue.get(False)
+                _type = queue_data[0]
                 if self.heart_measure_callback and _type == QUEUE_TYPES.HEART:
-                    self.heart_measure_callback(self._parse_heart_measure(res[1]))
+                    self.heart_measure_callback(self._parse_heart_measure(queue_data[1]))
                 elif self.gyro_raw_callback and _type == QUEUE_TYPES.RAW_ACCEL:
-                    self.gyro_raw_callback(self._parse_raw_gyro(res[1]))
+                    self.gyro_raw_callback(self._parse_raw_gyro(queue_data[1]))
+                elif self.gyro_avg_callback and _type == QUEUE_TYPES.AVG_GYRO:
+                    self.gyro_avg_callback(self._parse_avg_gyro(queue_data[1]))
             except Empty:
                 break
+
+    def _parse_avg_gyro(self, bytes):
+        gyro_avg_data = struct.unpack('<b3h', bytes[1:])
+        gyro_dict = {
+            'gyro_time': gyro_avg_data[0],
+            'gyro_avg_x': gyro_avg_data[1],
+            'gyro_avg_y': gyro_avg_data[2],
+            'gyro_avg_z': gyro_avg_data[3]
+        }
+        return_tuple = ['GYRO_AVG', gyro_dict]
+        return return_tuple
+
 
     def _parse_heart_measure(self, bytes):
         res = struct.unpack('bb', bytes)[1]
@@ -202,12 +236,18 @@ class miband(Peripheral):
         print("BPM: {}".format(res))
         return return_tuple
 
+
     def _parse_raw_gyro(self, bytes):
-        res = []
-        for i in range(3):
-            g = struct.unpack('hhh', bytes[2 + i * 6:8 + i * 6])
-            res.append({'x': g[0], 'y': g[1], 'z': g[2]})
-        return_tuple = ["GYRO", res]
+        gyro_raw_data_list = []
+        for i in range(2, 20, 6):
+            gyro_raw_data = struct.unpack("3h", bytes[i:(i+6)])
+            gyro_dict = {
+                'gyro_raw_x': gyro_raw_data[0],
+                'gyro_raw_y': gyro_raw_data[1],
+                'gyro_raw_z': gyro_raw_data[2]
+            }
+            gyro_raw_data_list.append(gyro_dict)
+        return_tuple = ["GYRO_RAW", gyro_raw_data_list]
         return return_tuple
 
 
@@ -223,6 +263,7 @@ class miband(Peripheral):
                     self.write_req(_payload[0], _payload[1], response=_payload[2])
             except Empty:
                 break
+
 
     def vibrate(self, value):
         if value == 255 or value == 0:
@@ -242,11 +283,13 @@ class miband(Peripheral):
             self.write_cmd(self._char_alert, bytepattern.vibration(value), queued=True)
             time.sleep(vibration_duration)
 
+
     def write_cmd(self, characteristic, data, response=False, queued=False):
         if queued:
             self.write_queue.put(['write_cmd', [characteristic, data, response]])
         else:
             characteristic.write(data, withResponse=response)
+
 
     def write_req(self, handle, data, response=True, queued=False):
         if queued:
@@ -259,6 +302,7 @@ class miband(Peripheral):
         self.process_write_queue()
         self.waitForNotifications(wait)
 
+
     def send_gyro_start(self, sensitivity):
         if not self.gyro_started_flag:
             self._log.info("Starting gyro...")
@@ -266,9 +310,11 @@ class miband(Peripheral):
             self.write_req(self._steps_handle, bytepattern.start)
             self.write_req(self._hz_handle, bytepattern.start)
             self.gyro_started_flag = True
-        self.write_cmd(self._char_sensor, bytepattern.gyro_start(sensitivity))
+        #self.write_cmd(self._char_sensor, bytepattern.gyro_start(sensitivity))
+        self.write_cmd(self._char_sensor, bytes.fromhex('010119'))
         self.write_req(self._sensor_handle, bytepattern.stop)
         self.write_cmd(self._char_sensor, b'\x02')
+
 
     def send_heart_measure_start(self):
         self._log.info("Starting heart measure...")
@@ -281,12 +327,13 @@ class miband(Peripheral):
     def send_heart_measure_keepalive(self):
         self.write_cmd(self._char_heart_ctrl, bytepattern.heart_measure_keepalive, response=True)
 
+
     def start_heart_and_gyro(self, sensitivity, callback):
         self.heart_measure_callback = callback
         self.gyro_raw_callback = callback
 
         self.send_gyro_start(sensitivity)
-        self.send_heart_measure_start()
+        #self.send_heart_measure_start()
 
         heartbeat_time = time.time()
         while True:

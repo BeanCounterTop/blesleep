@@ -10,8 +10,10 @@ import sleepdata, vibrate
 auth_key_filename = 'auth_key.txt'
 mac_filename = 'mac.txt'
 
+maximize_graph = False
+
 vibration_settings = {
-    'interval_minutes': 0.2,
+    'interval_minutes': 45,
     'duration_seconds': 5,
     'type': 'random'
     }
@@ -68,7 +70,7 @@ def sleep_monitor_callback(data):
     if not sleepdata.last_tick_time:
         sleepdata.last_tick_time = time.time()
 
-    if data[0] == "GYRO":
+    if data[0] == "GYRO_RAW":
         sleepdata.process_gyro_data(data[1], tick_time)
     elif data[0] == "HR":
         sleepdata.process_heartrate_data(data[1], tick_time)
@@ -120,7 +122,7 @@ if __name__ == "__main__":
     connect()
     threading.Thread(target=start_data_pull).start()
     threading.Thread(target=start_vibration).start()
-    #sleepdata.init_graph()
+    sleepdata.init_graph(maximize=maximize_graph, graph_displaytime_mins=5)
 
 
 
