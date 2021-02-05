@@ -1,6 +1,6 @@
 from datetime import datetime
 from os import path
-import csv
+import csv, time
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -17,14 +17,10 @@ sleep_data = {
                     'value_name': 'movement',
                     'periods': [10, 30, 60],
                     'raw_data': [],
-                    'averaged_data': [],
-                    'workspace': {
-                        'gyro_last_x' : 0,
-                        'gyro_last_y' : 0,
-                        'gyro_last_z' : 0
+                    'averaged_data': []
                     }
                 } 
-            }
+            
 
 tick_seconds = 0.5
 last_tick_time = None
@@ -40,6 +36,8 @@ graph_figure.canvas.set_window_title('blesleep')
 graph_axes = graph_figure.add_subplot(1, 1, 1)
 graph_data = {}
 
+graph_displaytime_minutes = None
+
 last_heartrate = 0
 
 class Average_Gyro_Data():
@@ -52,12 +50,12 @@ class Average_Gyro_Data():
     def process(self, gyro_data):
         gyro_movement = 0
         for gyro_datum in gyro_data:
-            gyro_delta_x = abs(gyro_datum['x'] - self.gyro_last_x)
-            self.gyro_last_x = gyro_datum['x']
-            gyro_delta_y = abs(gyro_datum['y'] - self.gyro_last_y)
-            self.gyro_last_y = gyro_datum['y']
-            gyro_delta_z = abs(gyro_datum['z'] - self.gyro_last_z)
-            self.gyro_last_z = gyro_datum['z']
+            gyro_delta_x = abs(gyro_datum['gyro_raw_x'] - self.gyro_last_x)
+            self.gyro_last_x = gyro_datum['gyro_raw_x']
+            gyro_delta_y = abs(gyro_datum['gyro_raw_y'] - self.gyro_last_y)
+            self.gyro_last_y = gyro_datum['gyro_raw_y']
+            gyro_delta_z = abs(gyro_datum['gyro_raw_z'] - self.gyro_last_z)
+            self.gyro_last_z = gyro_datum['gyro_raw_z']
             gyro_delta_sum = gyro_delta_x + gyro_delta_y + gyro_delta_z
             gyro_movement += gyro_delta_sum
         return gyro_movement
@@ -109,6 +107,22 @@ def flush_old_raw_data(tick_time):
             write_csv(old_raw_data, 'raw')
 
 
+def flush_old_graph_data(graph_displaytime_minutes):
+    graph_displaytime_seconds = graph_displaytime_minutes * 60
+    tick_time = time.time()
+    for data_type in sleep_data:
+        s_data = sleep_data[data_type]
+        cleaned_graph_data = []
+        old_graph_data = []
+        for avg_datum in s_data['averaged_data']:
+            datum_age = tick_time - datetime.timestamp(avg_datum['time'])
+            if datum_age < graph_displaytime_seconds:
+                cleaned_graph_data.append(avg_datum)
+            else:
+                old_graph_data.append(avg_datum)
+        s_data['averaged_data'] = cleaned_graph_data
+
+
 def average_raw_data(tick_time):
     global last_heartrate
     timestamp = datetime.fromtimestamp(tick_time)
@@ -144,7 +158,6 @@ def average_raw_data(tick_time):
             csv_out[csv_header_field_name] = zero_to_nan(period_data_average)
 
         s_data['averaged_data'].append(period_averages_dict)
-
     write_csv([csv_out], 'avg')
 
 
@@ -177,12 +190,13 @@ def zero_to_nan(value):
 
 def update_graph_data():
     for data_type in sleep_data:
-        s_data = sleep_data[data_type]  # Re-referenced to shorten name
+        s_data = sleep_data[data_type]
+        
         avg_data = s_data['averaged_data']
 
         if len(avg_data) > 1:
             
-            g_data = graph_data[data_type]  # Re-referenced to short name
+            g_data = graph_data[data_type]
             data_periods = s_data['periods']
 
             starting_index = max([(len(g_data['time']) - 1), 0])
@@ -209,13 +223,11 @@ def init_graph_data():
 
 
 def graph_animation(i):
-    global graph_axes
-    global graph_data
-    plotflag = False
-
+    
     if len(graph_data) == 0:
         init_graph_data()
 
+    flush_old_graph_data(graph_displaytime_minutes)
     update_graph_data()
 
     for data_type in graph_data:
@@ -223,6 +235,7 @@ def graph_animation(i):
             graph_axes.clear()
             break
 
+    plotflag = False
     for data_type in sleep_data:
         s_data = sleep_data[data_type]
         g_data = graph_data[data_type]
@@ -239,10 +252,13 @@ def graph_animation(i):
         plt.legend()
 
 
-def init_graph(maximize=False):
+def init_graph(graph_displaytime_mins=60, maximize=False):
+    global graph_displaytime_minutes
+    graph_displaytime_minutes = graph_displaytime_mins
     if maximize:
         figure_manager = plt.get_current_fig_manager()
         figure_manager.full_screen_toggle()
+    
     ani = animation.FuncAnimation(graph_figure, graph_animation, interval=1000)
     plt.show()
 

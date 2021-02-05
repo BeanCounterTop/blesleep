@@ -88,3 +88,5 @@ class QUEUE_TYPES(object):
     HEART = 'heart'
     RAW_ACCEL = 'raw_accel'
     RAW_HEART = 'raw_heart'
+    RAW_GYRO = 'raw_gyro'
+    AVG_GYRO = 'avg_gyro'
