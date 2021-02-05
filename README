@@ -10,16 +10,16 @@ You will need to create two .txt files in the base directory:
 
 
 CURRENT STATUS:
-Right now the project does not yet fulfill its purpose.  
-If you execute the project as-is, it will connect to the miband and plot HR and gyroscope data to the screen.
-I'm currently working on massaging the returned data to create signals that can be usefully incorporated into a detection algorithm.
+Right now the project does not yet fulfill its primary purpose (responding to biometrics).  
+If executed now, it will:
+* Log raw and averaged biometric data to disk
+* Vibrate in a random pattern every 30 minutes (adjustable)
 
 GOALS:
 * Publish statistics to Google Sheets or other easy-to-use target.  I'd like to make this usable by non-technical folks, so S3 buckets and CloudWatch are out of scope.
 * Incorporate an LSTM neural network as the detection algorithm.  This will require a dedicated "training period", as each user will likely produce different signals.
 * Create a GUI dashboard to display sleep statistics and other controls.  My vision for the end product is a standalone RasPi device with a 7" touchscreen display.
 * Add support for multiple (cheap) fitness trackers.  I'd like this work to be usable by low-income folks who can't afford Apple Watches.
-* Create a framework to incorporate additional biometrics/signals as they become available.  For example, SpO2, galvanic skin response, respiration, BP, etc.
 * Create a holistic sleep-tracking interface to provide users the ability to clearly observe the effects of things like changes in routine, medication, diet, etc.
 
 
