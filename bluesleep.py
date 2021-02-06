@@ -3,7 +3,9 @@
 import time, re, threading
 from bluepy.btle import BTLEDisconnectError
 from miband import miband
-import sleepdata, vibrate
+import sleepdata
+from vibrate import Vibrate
+
 
 
 
@@ -13,7 +15,7 @@ mac_filename = 'mac.txt'
 maximize_graph = False
 
 vibration_settings = {
-    'interval_minutes': 45,
+    'interval_minutes': 0.1,
     'duration_seconds': 5,
     'type': 'random'
     }
@@ -91,7 +93,6 @@ def connect():
         try:
             band = miband(MAC_ADDR, AUTH_KEY, debug=True)
             success = band.initialize()
-            vibrate.band = band
         except BTLEDisconnectError:
             print(msg.format(timeout))
             time.sleep(timeout)
@@ -112,7 +113,7 @@ def start_data_pull():
 def start_vibration():
     while True:
         try:
-            vibrate.timed_vibration(vibration_settings)
+            vibration.timed_vibration(vibration_settings)
         except BTLEDisconnectError:
             print("Vibration thread waiting for band reconnect...")
             time.sleep(1)
@@ -120,6 +121,7 @@ def start_vibration():
 
 if __name__ == "__main__":
     connect()
+    vibration = Vibrate(band)
     threading.Thread(target=start_data_pull).start()
     threading.Thread(target=start_vibration).start()
     sleepdata.init_graph(maximize=maximize_graph, graph_displaytime_mins=5)
