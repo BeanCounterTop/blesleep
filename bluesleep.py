@@ -15,7 +15,7 @@ mac_filename = 'mac.txt'
 maximize_graph = False
 
 vibration_settings = {
-    'interval_minutes': 0.1,
+    'interval_minutes': 45,
     'duration_seconds': 5,
     'type': 'random'
     }
