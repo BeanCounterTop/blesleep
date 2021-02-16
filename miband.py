@@ -301,16 +301,6 @@ class miband(Peripheral):
         self.waitForNotifications(wait)
 
 
-    # def send_gyro_start(self, sensitivity):
-    #     if not self.gyro_started_flag:
-    #         self._log.info("Starting gyro...")
-    #         self.write_req(self._sensor_handle, BYTEPATTERNS.start)
-    #         self.write_req(self._steps_handle, BYTEPATTERNS.start)
-    #         self.write_req(self._hz_handle, BYTEPATTERNS.start)
-    #         self.gyro_started_flag = True
-    #     self.write_cmd(self._char_sensor, BYTEPATTERNS.gyro_start(sensitivity))
-    #     self.write_req(self._sensor_handle, BYTEPATTERNS.stop)
-    #     self.write_cmd(self._char_sensor, b'\x02')
     def send_gyro_start(self, sensitivity):
         if not self.gyro_started_flag:
             self._log.info("Starting gyro...")
@@ -319,10 +309,9 @@ class miband(Peripheral):
             self.write_req(self._hz_handle, BYTEPATTERNS.start)
             self.gyro_started_flag = True
         self.write_cmd(self._char_sensor, BYTEPATTERNS.gyro_start(sensitivity))
-        self.write_cmd(self._char_sensor, bytes.fromhex("010100000019"))
         self.write_req(self._sensor_handle, BYTEPATTERNS.stop)
         self.write_cmd(self._char_sensor, b'\x02')
-        self.write_cmd(self._char_sensor, b'\x03')
+
 
     def send_heart_measure_start(self):
         self._log.info("Starting heart measure...")
