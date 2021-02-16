@@ -10,10 +10,10 @@ You will need to create two .txt files in the base directory:
 
 
 CURRENT STATUS:
-Right now the project does not yet fulfill its primary purpose (responding to biometrics).  
-If executed now, it will:
-* Log raw and averaged biometric data to disk
-* Vibrate in a random pattern every 30 minutes (adjustable)
+The project now supports basic "heartrate alarming".  Currently it's configured to send a 10-second random vibration pattern if the heartrate increase percentage goes 
+above 17% of the lowest HR value for the last 10 readings, with a 20-minute delay between vibrations.  This was tested on the Miband5, which has a better HR 
+sensor, though I've not yet fully figured out the gyroscope data.  Right now only HR and vibration are supported on the Miband5.
+
 
 GOALS:
 * Publish statistics to Google Sheets or other easy-to-use target.  I'd like to make this usable by non-technical folks, so S3 buckets and CloudWatch are out of scope.
