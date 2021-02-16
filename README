@@ -10,9 +10,7 @@ You will need to create two .txt files in the base directory:
 
 
 CURRENT STATUS:
-The project now supports basic "heartrate alarming".  Currently it's configured to send a 10-second random vibration pattern if the heartrate increase percentage goes 
-above 17% of the lowest HR value for the last 10 readings, with a 20-minute delay between vibrations.  This was tested on the Miband5, which has a better HR 
-sensor, though I've not yet fully figured out the gyroscope data.  Right now only HR and vibration are supported on the Miband5.
+The project now supports basic "heartrate alarming".  Currently it's configured to send a 10-second random vibration pattern if the heartrate increase percentage goes above 17% of the lowest HR value for the last 10 readings, with a 20-minute delay between vibrations.  This was tested on the Miband5, which has a better HR  sensor, though I've not yet fully figured out the gyroscope data.  Right now only HR and vibration are supported on the Miband5.
 
 
 GOALS:
@@ -24,7 +22,4 @@ GOALS:
 
 
 DISCLAIMER:
-None of the statements on this web site have been evaluated by the FDA.
-Furthermore, none of the statements herein should be construed as dispensing medical advice, or making claims regarding the cure or treatment of diseases. 
-These statements have not been evaluated by the Food and Drug Administration. 
-These project is not intended to diagnose, treat, cure, or prevent any diseases.
+None of the statements on this web site have been evaluated by the FDA.  Furthermore, none of the statements herein should be construed as dispensing medical advice, or making claims regarding the cure or treatment of diseases.  These statements have not been evaluated by the Food and Drug Administration.  This project is not intended to diagnose, treat, cure, or prevent any diseases.
