@@ -15,10 +15,9 @@ mac_filename = 'mac.txt'
 maximize_graph = False
 
 vibration_settings = {
-    'interval_minutes': 20,
-    'duration_seconds': 10,
-    'type': 'random',
-    'heartrate_alarm_pct': 17
+    'interval_minutes': 45,
+    'duration_seconds': 5,
+    'type': 'random'
     }
 
 band = None
@@ -66,7 +65,7 @@ def average_data(tick_time):
         sleepdata.average_raw_data(tick_time)
         sleepdata.last_tick_time = time.time()
 
-   
+    
 def sleep_monitor_callback(data):
     tick_time = time.time()
 
@@ -79,9 +78,6 @@ def sleep_monitor_callback(data):
         sleepdata.process_heartrate_data(data[1], tick_time)
 
     average_data(tick_time)
-
-    vibration.heartrate_increase_pct = sleepdata.analyze_heartrate(10)
-    print("HR increase percent: {}".format(vibration.heartrate_increase_pct))
 
 
 def connect():
@@ -117,9 +113,7 @@ def start_data_pull():
 def start_vibration():
     while True:
         try:
-            #vibration.timed_vibration(vibration_settings)
-            vibration.heartrate_alarm(vibration_settings)
-
+            vibration.timed_vibration(vibration_settings)
         except BTLEDisconnectError:
             print("Vibration thread waiting for band reconnect...")
             time.sleep(1)

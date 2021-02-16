@@ -12,6 +12,8 @@ import logging
 class Vibrate():
     vibrate_band = None
     vibration_log = None
+    heartrate_increase_pct = 0
+
 
     def __init__(self, band):
         self.vibrate_band = band
@@ -22,12 +24,53 @@ class Vibrate():
         self.vibration_log = logging.getLogger(__name__)
         self.vibration_log.setLevel(vibration_log_level)
 
+
+    def heartrate_alarm(self, settings):
+        interval_minutes = settings['interval_minutes']
+        duration_seconds = settings['duration_seconds']
+        type = settings['type']
+        heartrate_alarm_pct = settings['heartrate_alarm_pct']
+
+        tick_time = time.time()
+        buzz_delay = interval_minutes * 60
+        buzz_timer = tick_time - buzz_delay
+
+
+        self.vibration_log.info("Starting heartrate alarm timer, alarming at {} percent for {} seconds with a {} minute interval".format(
+                                                                                                        heartrate_alarm_pct, 
+                                                                                                        duration_seconds, 
+                                                                                                        interval_minutes))
+        if type not in ['random', 'pattern', 'rolling', 'continuous']:
+            self.vibration_log.warn("Invalid or no vibration type specified: {}".format(type))
+            self.vibration_log.warn("Must be one of these: random, pattern, rolling, continuous")
+            return
+
+        while True:
+            elapsed_time = tick_time - buzz_timer
+            if elapsed_time >= buzz_delay and self.heartrate_increase_pct >= heartrate_alarm_pct:
+                self.vibration_log.info("Heartrate alarm triggered at {} percent, buzzing".format(self.heartrate_increase_pct))
+                if type == 'random':
+                    self.vibrate_random(duration_seconds)
+                elif type == 'pattern':
+                    self.vibrate_pattern(duration_seconds)
+                elif type == 'rolling':
+                    self.vibrate_rolling(duration_seconds)
+                elif type == 'continuous':
+                    self.vibrate_continuous(duration_seconds)
+                buzz_timer = tick_time
+            elif not elapsed_time >= buzz_delay and self.heartrate_increase_pct >= heartrate_alarm_pct:
+                self.vibration_log.info("Heartrate alarm threshold reached ({} percent) but timout not expired".format(self.heartrate_increase_pct))
+            else:
+                tick_time = time.time()
+            time.sleep(0.5)
+
+
     def timed_vibration(self, settings):
         interval_minutes = settings['interval_minutes']
         duration_seconds = settings['duration_seconds']
         type = settings['type']
         
-        buzz_timer = time.time()
+        buzz_timer = time.time() 
         tick_time = time.time()
         buzz_delay = interval_minutes * 60
 

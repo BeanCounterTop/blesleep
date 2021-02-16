@@ -12,6 +12,7 @@ sleep_data = {
                     'periods': [2, 5, 10, 15], 
                     'raw_data': [],
                     'averaged_data': [],
+                    'last_hr': []
                     },
                 'movement':{
                     'value_name': 'movement',
@@ -173,6 +174,7 @@ def process_gyro_data(gyro_data, tick_time):
 
 
 def process_heartrate_data(heartrate_data, tick_time):
+    last_heartrate_count = 20
     print("BPM: " + str(heartrate_data))
     if heartrate_data > 0:
         value_name = sleep_data['heartrate']['value_name']
@@ -181,6 +183,21 @@ def process_heartrate_data(heartrate_data, tick_time):
             value_name: heartrate_data
         } )
 
+        if len(sleep_data['heartrate']['last_hr']) > last_heartrate_count:
+            sleep_data['heartrate']['last_hr'].pop(0)
+        sleep_data['heartrate']['last_hr'].append(heartrate_data)
+
+
+def analyze_heartrate(hr_count):
+    # Finds the pct change between the lowest HR in the last $hr_count samples and the current HR
+    pct_heartrate_increase = 0
+    if len(sleep_data['heartrate']['last_hr']) >= hr_count:
+        last_heartrate_list = sleep_data['heartrate']['last_hr'][-hr_count:]
+        last_heartrate_min = min(last_heartrate_list)
+        current_heartrate = last_heartrate_list[-1]
+        pct_heartrate_increase = int((current_heartrate - last_heartrate_min)/last_heartrate_min*100)
+    return pct_heartrate_increase
+    
 
 def zero_to_nan(value):
     if value == 0:

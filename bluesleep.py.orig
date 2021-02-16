@@ -15,10 +15,33 @@ mac_filename = 'mac.txt'
 maximize_graph = False
 
 vibration_settings = {
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+    'interval_minutes': 0.1,
+    'duration_seconds': 5,
+    'type': 'random'
+=======
+=======
+>>>>>>> Stashed changes
     'interval_minutes': 20,
     'duration_seconds': 10,
     'type': 'random',
     'heartrate_alarm_pct': 17
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
+||||||| constructed merge base
+    'interval_minutes': 45,
+    'duration_seconds': 5,
+    'type': 'random'
+=======
+    'interval_minutes': 20,
+    'duration_seconds': 10,
+    'type': 'random',
+    'heartrate_alarm_pct': 17
+>>>>>>> Stashed changes
     }
 
 band = None
