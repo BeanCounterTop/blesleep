@@ -28,7 +28,7 @@ class Vibrate():
     def heartrate_alarm(self, settings):
         interval_minutes = settings['interval_minutes']
         duration_seconds = settings['duration_seconds']
-        type = settings['type']
+        vibration_type = settings['type']
         heartrate_alarm_pct = settings['heartrate_alarm_pct']
 
         tick_time = time.time()
@@ -40,7 +40,7 @@ class Vibrate():
                                                                                                         heartrate_alarm_pct, 
                                                                                                         duration_seconds, 
                                                                                                         interval_minutes))
-        if type not in ['random', 'pattern', 'rolling', 'continuous']:
+        if vibration_type not in ['random', 'pattern', 'rolling', 'continuous']:
             self.vibration_log.warn("Invalid or no vibration type specified: {}".format(type))
             self.vibration_log.warn("Must be one of these: random, pattern, rolling, continuous")
             return
@@ -49,13 +49,13 @@ class Vibrate():
             elapsed_time = tick_time - buzz_timer
             if elapsed_time >= buzz_delay and self.heartrate_increase_pct >= heartrate_alarm_pct:
                 self.vibration_log.info("Heartrate alarm triggered at {} percent, buzzing".format(self.heartrate_increase_pct))
-                if type == 'random':
+                if vibration_type == 'random':
                     self.vibrate_random(duration_seconds)
-                elif type == 'pattern':
+                elif vibration_type == 'pattern':
                     self.vibrate_pattern(duration_seconds)
-                elif type == 'rolling':
+                elif vibration_type == 'rolling':
                     self.vibrate_rolling(duration_seconds)
-                elif type == 'continuous':
+                elif vibration_type == 'continuous':
                     self.vibrate_continuous(duration_seconds)
                 buzz_timer = tick_time
             elif not elapsed_time >= buzz_delay and self.heartrate_increase_pct >= heartrate_alarm_pct:
